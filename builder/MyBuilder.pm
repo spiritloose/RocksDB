@@ -10,6 +10,7 @@ sub new {
     my ($class, %args) = @_;
     %args = (get_options => { 'with-included-rocksdb' => { type => '!' } }, %args);
     my $self = $class->SUPER::new(%args);
+    $self->check_compiler or die 'C++11 compiler required';
     my $build_config = $self->parse_build_config();
     my @extra_compiler_flags = (
         qw(-x c++ -std=gnu++11 -I.),
@@ -34,6 +35,22 @@ sub new {
     $self->extra_compiler_flags(@extra_compiler_flags);
     $self->extra_linker_flags(@extra_linker_flags);
     $self;
+}
+
+sub check_compiler {
+    my $self = shift;
+    require File::Temp;
+    print 'checking for C++11 support... ';
+    my ($fh, $filename) = File::Temp::tempfile(SUFFIX => '.cc', UNLINK => 1);
+    print $fh <<'END_SRC';
+#if __cplusplus < 201103L
+#error C++11 Required
+#endif
+END_SRC
+    my $cc = $self->config('cc');
+    my $failed = system "$cc -x c++ -std=gnu++11 $filename -c -o /dev/null >/dev/null 2>&1";
+    print $failed ? "no\n" : "yes\n";
+    !$failed;
 }
 
 sub parse_build_config {
@@ -77,7 +94,9 @@ int main() {
     return 0;
 }
 END_SRC
-    my $failed = system "g++ $config->{PLATFORM_CXXFLAGS} $config->{PLATFORM_LDFLAGS} $filename -o /dev/null >/dev/null 2>&1";
+    my $cc = $self->config('cc');
+    my $options = "-x c++ -std=gnu++11 -lstdc++ $config->{PLATFORM_CXXFLAGS} $config->{PLATFORM_LDFLAGS}";
+    my $failed = system "$cc $options $filename -o /dev/null >/dev/null 2>&1";
     print $failed ? "no\n" : "yes\n";
     !$failed;
 }
