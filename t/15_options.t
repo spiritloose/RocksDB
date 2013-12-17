@@ -4,7 +4,7 @@ use warnings;
 use Test::More;
 use RocksDB;
 use File::Temp;
-use POSIX;
+use POSIX ();
 
 {
     package MyComparator;
