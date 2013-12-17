@@ -1,6 +1,6 @@
 =head1 NAME
 
-RocksDB::Snapshot - rocksDB::Snapshot object
+RocksDB::Snapshot - rocksdb::Snapshot object
 
 =head1 SYNOPSIS
 

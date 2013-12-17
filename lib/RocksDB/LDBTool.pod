@@ -1,6 +1,6 @@
 =head1 NAME
 
-RocksDB::LDBTool - RocksDB::LDBTool object
+RocksDB::LDBTool - rocksdb::LDBTool object
 
 =head1 SYNOPSIS
 
