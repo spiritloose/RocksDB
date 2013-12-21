@@ -14,7 +14,15 @@ sub new {
     my $build_config = $self->parse_build_config();
     my @extra_compiler_flags = (
         qw(-x c++ -std=gnu++11 -I.),
-        qw(-Wno-reserved-user-defined-literal -Wno-duplicate-decl-specifier -Wno-parentheses),
+        qw(
+            -Wall
+            -Wno-reserved-user-defined-literal
+            -Wno-duplicate-decl-specifier
+            -Wno-parentheses
+            -Wno-unused
+            -Wno-literal-suffix
+            -Wno-unknown-warning-option
+        ),
         split(/\s+/, $build_config->{PLATFORM_CXXFLAGS}),
     );
     my @extra_linker_flags = (

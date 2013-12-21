@@ -1028,7 +1028,7 @@ CODE:
     std::vector<std::string> values;
     std::vector<rocksdb::Status> statuses = THIS->db->MultiGet(opts, vkeys, &values);
     HV* result = newHV();
-    for (int i = 0; i < values.size(); i++) {
+    for (std::vector<std::string>::size_type i = 0; i < values.size(); i++) {
         if (statuses[i].IsNotFound()) {
             hv_store_ent(result, ST(i + 1), newSV(0), 0);
         } else {
@@ -1299,7 +1299,7 @@ RocksDB::DB::get_live_files_meta_data()
 PPCODE:
     std::vector<rocksdb::LiveFileMetaData> metadata;
     THIS->db->GetLiveFilesMetaData(&metadata);
-    for (int i = 0; i < metadata.size(); i++) {
+    for (std::vector<rocksdb::LiveFileMetaData>::size_type i = 0; i < metadata.size(); i++) {
         rocksdb::LiveFileMetaData data = metadata[i];
         HV *hv = newHV();
         hv_stores(hv, "name", newSVpvn(data.name.c_str(), data.name.size()));
@@ -1317,7 +1317,7 @@ RocksDB::DB::get_sorted_wal_files()
 PPCODE:
     rocksdb::VectorLogPtr files;
     CROAK_ON_ERROR(THIS->db->GetSortedWalFiles(files));
-    for (int i = 0; i < files.size(); i++) {
+    for (std::vector<std::unique_ptr<rocksdb::LogFile>>::size_type i = 0; i < files.size(); i++) {
         HV* hv = newHV();
         std::string path_name = files[i]->PathName();
         hv_stores(hv, "path_name", newSVpvn(path_name.c_str(), path_name.size()));
