@@ -47,6 +47,16 @@ RocksDB is an embeddable persistent key-value store for fast storage.
 
 See [http://rocksdb.org/](http://rocksdb.org/) for more details.
 
+# INSTALLATION
+
+This distribution bundles the rocksdb source tree, so you don't need to have rocksdb.
+
+If rocksdb already installed, the installer figures out it.
+
+rocksdb depends on some environment. See vendor/rocksdb/INSTALL.md before installation.
+
+Currently rocksdb supports Linux and OS X only.
+
 # CONSTRUCTOR
 
 ## `RocksDB->new($name :Str[, $options :HashRef]) :RocksDB`
