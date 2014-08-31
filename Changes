@@ -2,6 +2,10 @@ Revision history for Perl extension RocksDB
 
 {{$NEXT}}
 
+0.03 2014-08-31T13:15:06Z
+    - Update rocksdb (3.4)
+    - Add new options
+
 0.02 2013-12-26T02:14:22Z
     - Update rocksdb (71ddb117)
     - Check C++11 Compiler

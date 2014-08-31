@@ -319,6 +319,26 @@ For details, see the documentation for RocksDB itself.
 
 ## Open options
 
+- IncreaseParallelism :Undef
+
+    Call DBOptions.IncreaseParallelism(). Value will be ignored.
+
+- PrepareForBulkLoad :Undef
+
+    Call Options.PrepareForBulkLoad(). Value will be ignored.
+
+- OptimizeForPointLookup :Undef
+
+    Call ColumnFamilyOptions.OptimizeForPointLookup(). Value will be ignored.
+
+- OptimizeLevelStyleCompaction :Maybe\[Int\]
+
+    Call ColumnFamilyOptions.OptimizeLevelStyleCompaction() with given value.
+
+- OptimizeUniversalStyleCompaction :Maybe\[Int\]
+
+    Call ColumnFamilyOptions.OptimizeUniversalStyleCompaction() with given value.
+
 - read\_only :Bool
 
     Defaults to false. If true, call rocksdb::DB::OpenForReadOnly().
@@ -363,6 +383,10 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to 1000.
 
+- max\_total\_wal\_size :Int
+
+    Defaults to 0.
+
 - block\_cache :RocksDB::Cache
 
     Defaults to undef. See [RocksDB::Cache](https://metacpan.org/pod/RocksDB::Cache), [RocksDB::LRUCache](https://metacpan.org/pod/RocksDB::LRUCache).
@@ -386,11 +410,13 @@ For details, see the documentation for RocksDB itself.
         snappy
         zlib
         bzip2
+        lz4
+        lz4hc
         none
 
 - compression\_per\_level :ArrayRef\[Str\]
 
-        ['snappy', 'zlib', 'zlib', 'bzip2', ...]
+        ['snappy', 'zlib', 'zlib', 'bzip2', 'lz4', 'lz4hc' ...]
 - filter\_policy :RocksDB::FilterPolicy
 
     Defaults to undef. See [RocksDB::FilterPolicy](https://metacpan.org/pod/RocksDB::FilterPolicy), [RocksDB::BloomFilterPolicy](https://metacpan.org/pod/RocksDB::BloomFilterPolicy).
@@ -481,7 +507,7 @@ For details, see the documentation for RocksDB itself.
 
 - disable\_seek\_compaction :Bool
 
-    Defaults to false.
+    Defaults to true.
 
 - delete\_obsolete\_files\_period\_micros :Int
 
@@ -493,7 +519,7 @@ For details, see the documentation for RocksDB itself.
 
 - max\_background\_flushes :Int
 
-    Defaults to 0.
+    Defaults to 1.
 
 - max\_log\_file\_size :Int
 
@@ -608,16 +634,29 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to 0.
 
+- allow\_thread\_local :Bool
+
+    Defaults to true.
+
 - compaction\_style :Str
 
     Defaults to 'level'. It can be specified using the following arguments.
 
         level
         universal
+        fifo
+
+- verify\_checksums\_in\_compaction :Bool
+
+    Defaults to true.
 
 - compaction\_options\_universal :HashRef
 
     See 'Universal compaction options' section below.
+
+- compaction\_options\_fifo :HashRef
+
+    See 'FIFO compaction options' section below.
 
 - filter\_deletes :Bool
 
@@ -634,6 +673,30 @@ For details, see the documentation for RocksDB itself.
 - inplace\_update\_num\_locks :Int
 
     Defaults to 10000, if inplace\_update\_support = true, else 0.
+
+- memtable\_prefix\_bloom\_bits :Int
+
+    If prefix\_extractor is set and bloom\_bits is not 0, create prefix bloom for memtable.
+
+- memtable\_prefix\_bloom\_probes :Int
+
+    Number of hash probes per key.
+
+- memtable\_prefix\_bloom\_huge\_page\_tlb\_size :Int
+
+    Page size for huge page TLB for bloom in memtable. If <=0, not allocate from huge page TLB but from malloc.
+
+- bloom\_locality :Int
+
+    Defaults to 0.
+
+- max\_successive\_merges :Int
+
+    Defaults to 0 (disabled).
+
+- min\_partial\_merge\_operands :Int
+
+    Defaults to 2.
 
 ## Universal compaction options
 
@@ -664,27 +727,25 @@ For details, see the documentation for RocksDB itself.
         total_size
         similar_size
 
+## FIFO compaction options
+
+- max\_table\_files\_size :Int
+
+    Defaults to 1GB.
+
 ## Read options
 
 - verify\_checksums :Bool
 
-    Defaults to false.
+    Defaults to true.
 
 - fill\_cache :Bool
 
     Defaults to true.
 
-- prefix\_seek :Bool
-
-    Defaults to false.
-
 - snapshot :RocksDB::Snapshot
 
     Defaults to undef.  See [RocksDB::Snapshot](https://metacpan.org/pod/RocksDB::Snapshot).
-
-- prefix :Str
-
-    Defaults to undef.
 
 - read\_tier :Str
 
@@ -692,6 +753,10 @@ For details, see the documentation for RocksDB itself.
 
         read_all
         block_cache
+
+- tailing :Bool
+
+    Defaults to false.
 
 ## Write options
 
@@ -702,6 +767,10 @@ For details, see the documentation for RocksDB itself.
 - disableWAL :Bool
 
     Defaults to false.
+
+- timeout\_hint\_us :Int
+
+    Defaults to 0.
 
 ## Flush options
 
