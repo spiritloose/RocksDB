@@ -12,10 +12,9 @@ RocksDB::BatchResult *				T_OBJECT
 RocksDB::MergeOperator *			T_OBJECT
 RocksDB::Statistics*				T_OBJECT
 RocksDB::WriteBatchHandler*			T_OBJECT
+RocksDB::SliceTransform *			T_OBJECT
 rocksdb::WriteBatch *				T_OBJECT
 rocksdb::FilterPolicy *				T_OBJECT
-rocksdb::SliceTransform *			T_OBJECT
-const rocksdb::SliceTransform *		T_OBJECT
 rocksdb::LDBTool *					T_OBJECT
 const rocksdb::FilterPolicy *		T_OBJECT
 rocksdb::Iterator *					T_ROCKSDB_OBJECT

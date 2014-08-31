@@ -702,17 +702,9 @@ Defaults to false.
 
 Defaults to true.
 
-=item prefix_seek :Bool
-
-Defaults to false.
-
 =item snapshot :RocksDB::Snapshot
 
 Defaults to undef.  See L<RocksDB::Snapshot>.
-
-=item prefix :Str
-
-Defaults to undef.
 
 =item read_tier :Str
 

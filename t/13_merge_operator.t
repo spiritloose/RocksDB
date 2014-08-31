@@ -38,7 +38,7 @@ RocksDB->destroy_db($name);
         my ($self, $key, $existing_value, $operand_list) = @_;
         is $key, 'foo';
         is $existing_value, undef;
-        is_deeply $operand_list, ['baz'];
+        is_deeply $operand_list, ['bar', 'baz'];
         $operand_list->[-1];
     }
     sub partial_merge {

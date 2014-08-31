@@ -115,7 +115,6 @@ my $snapshot = $db->get_snapshot;
 is $db->get('foo', {
     verify_checksums => 0,
     fill_cache       => 1,
-    prefix_seek      => 0,
     snapshot         => $snapshot,
     read_tier        => 'read_all',
 }), 'bar';

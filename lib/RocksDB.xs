@@ -32,6 +32,7 @@ extern "C" {
 #include <rocksdb/slice_transform.h>
 #include <rocksdb/compaction_filter.h>
 #include <rocksdb/merge_operator.h>
+#include <rocksdb/statistics.h>
 #include <rocksdb/ldb_tool.h>
 #pragma pop_macro("NORMAL")
 
@@ -563,6 +564,13 @@ public:
     }
 };
 
+struct SliceTransform {
+    SliceTransform(std::shared_ptr<const rocksdb::SliceTransform> ptr) {
+        this->ptr = ptr;
+    }
+    std::shared_ptr<const rocksdb::SliceTransform> ptr;
+};
+
 }
 
 static rocksdb::CompressionType
@@ -682,11 +690,11 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         }
     }
     if (val = hv_fetchs(options, "prefix_extractor", 0)) {
-        if (rocksdb::SliceTransform* transform =
-                (rocksdb::SliceTransform*) FIND_MAGIC_OBJ(*val, "RocksDB::SliceTransform",
+        if (RocksDB::SliceTransform* transform =
+                (RocksDB::SliceTransform*) FIND_MAGIC_OBJ(*val, "RocksDB::SliceTransform",
                         TYPE_ROCKSDB_SLICETRANSFORM)) {
             av_push(fields, SvREFCNT_inc_simple_NN(*val));
-            opts->prefix_extractor = transform;
+            opts->prefix_extractor = transform->ptr;
         } else {
             croak("prefix_extractor is not of type RocksDB::SliceTransform");
         }
@@ -879,8 +887,6 @@ apply_read_options(pTHX_ rocksdb::ReadOptions* opts, HV* options) {
         opts->verify_checksums = SvTRUE(*val);
     if (val = hv_fetchs(options, "fill_cache", 0))
         opts->fill_cache = SvTRUE(*val);
-    if (val = hv_fetchs(options, "prefix_seek", 0))
-        opts->prefix_seek = SvTRUE(*val);
     if (val = hv_fetchs(options, "read_tier", 0)) {
         STRLEN len;
         char* str = SvPV(*val, len);
@@ -917,13 +923,6 @@ apply_flush_options(pTHX_ rocksdb::FlushOptions* opts, HV* options) {
     SV** val;
     if (val = hv_fetchs(options, "wait", 0))
         opts->wait = SvTRUE(*val);
-}
-
-static void
-cleanup_iterator_with_prefix(void* arg1, void* arg2) {
-    rocksdb::Slice* slice = (rocksdb::Slice*) arg1;
-    Safefree(slice->data());
-    delete slice;
 }
 
 MODULE = RocksDB        PACKAGE = RocksDB
@@ -1117,20 +1116,8 @@ CODE:
     rocksdb::ReadOptions opts = rocksdb::ReadOptions();
     if (options) {
         apply_read_options(aTHX_ &opts, options);
-        if (SV** val = hv_fetchs(options, "prefix", 0)) {
-            const rocksdb::SliceTransform* transform;
-            if ((transform = THIS->db->GetOptions().prefix_extractor) != NULL) {
-                rocksdb::Slice slice;
-                SV2SLICE(*val, slice);
-                rocksdb::Slice prefix = transform->Transform(slice);
-                opts.prefix = new rocksdb::Slice(savepvn(prefix.data(), prefix.size()));
-            }
-        }
     }
     RETVAL = THIS->db->NewIterator(opts);
-    if (opts.prefix != NULL) {
-        RETVAL->RegisterCleanup(cleanup_iterator_with_prefix, (void*) opts.prefix, NULL);
-    }
 OUTPUT:
     RETVAL
 
@@ -1640,7 +1627,7 @@ CLEANUP:
 MODULE = RocksDB        PACKAGE = RocksDB::SliceTransform
 
 void
-rocksdb::SliceTransform::DESTROY()
+RocksDB::SliceTransform::DESTROY()
 CLEANUP:
     DESTROY_ROCKSDB_OBJ(SELF);
 
@@ -1649,10 +1636,11 @@ MODULE = RocksDB        PACKAGE = RocksDB::FixedPrefixTransform
 BOOT:
     av_push(get_av("RocksDB::FixedPrefixTransform::ISA", TRUE), newSVpvs("RocksDB::SliceTransform"));
 
-const rocksdb::SliceTransform*
+RocksDB::SliceTransform*
 RocksDB::FixedPrefixTransform::new(size_t prefix_len)
 CODE:
-    RETVAL = rocksdb::NewFixedPrefixTransform(prefix_len);
+    const rocksdb::SliceTransform* transform = rocksdb::NewFixedPrefixTransform(prefix_len);
+    RETVAL = new RocksDB::SliceTransform(std::shared_ptr<const rocksdb::SliceTransform>(transform));
 OUTPUT:
     RETVAL
 
