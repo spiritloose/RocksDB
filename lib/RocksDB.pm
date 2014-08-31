@@ -636,10 +636,15 @@ Defaults to 'level'. It can be specified using the following arguments.
 
   level
   universal
+  fifo
 
 =item compaction_options_universal :HashRef
 
 See 'Universal compaction options' section below.
+
+=item compaction_options_fifo :HashRef
+
+See 'FIFO compaction options' section below.
 
 =item filter_deletes :Bool
 
@@ -689,6 +694,16 @@ Defaults to 'total_size'. It can be specified using the following arguments.
 
   total_size
   similar_size
+
+=back
+
+=head2 FIFO compaction options
+
+=over 4
+
+=item max_table_files_size :Int
+
+Defaults to 1GB.
 
 =back
 

@@ -841,6 +841,8 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
             opts->compaction_style = rocksdb::kCompactionStyleLevel;
         } else if (strnEQ(str, "universal", len)) {
             opts->compaction_style = rocksdb::kCompactionStyleUniversal;
+        } else if (strnEQ(str, "fifo", len)) {
+            opts->compaction_style = rocksdb::kCompactionStyleFIFO;
         } else {
             croak("invalid value '%s' for compaction_style", str);
         }
@@ -873,6 +875,16 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
             }
         }
         opts->compaction_options_universal = copts_univ;
+    }
+    if (val = hv_fetchs(options, "compaction_options_fifo", 0)) {
+        if (!SvHashRefOK(*val)) {
+            croak("invalid value for compaction_options_fifo");
+        }
+        HV* hv = (HV*) SvRV(*val);
+        rocksdb::CompactionOptionsFIFO copts_fifo;
+        if (val = hv_fetchs(hv, "max_table_files_size", 0))
+            copts_fifo.max_table_files_size = SvIV(*val);
+        opts->compaction_options_fifo = copts_fifo;
     }
     if (val = hv_fetchs(options, "filter_deletes", 0))
         opts->filter_deletes = SvTRUE(*val);
