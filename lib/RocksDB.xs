@@ -584,6 +584,10 @@ sv_to_compression_type(pTHX_ SV* sv, const char* name) {
             return rocksdb::kZlibCompression;
         } else if (strnEQ(str, "bzip2", len)) {
             return rocksdb::kBZip2Compression;
+        } else if (strnEQ(str, "lz4", len)) {
+            return rocksdb::kLZ4Compression;
+        } else if (strnEQ(str, "lz4hc", len)) {
+            return rocksdb::kLZ4HCCompression;
         } else {
             croak("invalid value '%s' for compression", name);
             return rocksdb::kNoCompression; /* NOT REACHED */

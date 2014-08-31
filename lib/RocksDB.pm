@@ -405,11 +405,13 @@ Defaults to 'snappy'. It can be specified using the following arguments.
   snappy
   zlib
   bzip2
+  lz4
+  lz4hc
   none
 
 =item compression_per_level :ArrayRef[Str]
 
-  ['snappy', 'zlib', 'zlib', 'bzip2', ...]
+  ['snappy', 'zlib', 'zlib', 'bzip2', 'lz4', 'lz4hc' ...]
 
 =item filter_policy :RocksDB::FilterPolicy
 
