@@ -644,6 +644,8 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->min_write_buffer_number_to_merge = SvIV(*val);
     if (val = hv_fetchs(options, "max_open_files", 0))
         opts->max_open_files = SvIV(*val);
+    if (val = hv_fetchs(options, "max_total_wal_size", 0))
+        opts->max_total_wal_size = SvIV(*val);
     if (val = hv_fetchs(options, "block_cache", 0)) {
         if (RocksDB::Cache *cache =
                 (RocksDB::Cache*) FIND_MAGIC_OBJ(*val, "RocksDB::Cache",
@@ -834,6 +836,8 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->use_adaptive_mutex = SvTRUE(*val);
     if (val = hv_fetchs(options, "bytes_per_sync", 0))
         opts->bytes_per_sync = SvIV(*val);
+    if (val = hv_fetchs(options, "allow_thread_local", 0))
+        opts->allow_thread_local = SvTRUE(*val);
     if (val = hv_fetchs(options, "compaction_style", 0)) {
         STRLEN len;
         char* str = SvPV(*val, len);
@@ -847,6 +851,8 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
             croak("invalid value '%s' for compaction_style", str);
         }
     }
+    if (val = hv_fetchs(options, "verify_checksums_in_compaction", 0))
+        opts->verify_checksums_in_compaction = SvTRUE(*val);
     if (val = hv_fetchs(options, "compaction_options_universal", 0)) {
         if (!SvHashRefOK(*val)) {
             croak("invalid value for compaction_options_universal");
@@ -894,6 +900,18 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->inplace_update_support = SvTRUE(*val);
     if (val = hv_fetchs(options, "inplace_update_num_locks", 0))
         opts->inplace_update_num_locks = SvIV(*val);
+    if (val = hv_fetchs(options, "memtable_prefix_bloom_bits", 0))
+        opts->memtable_prefix_bloom_bits = SvIV(*val);
+    if (val = hv_fetchs(options, "memtable_prefix_bloom_probes", 0))
+        opts->memtable_prefix_bloom_probes = SvIV(*val);
+    if (val = hv_fetchs(options, "memtable_prefix_bloom_huge_page_tlb_size", 0))
+        opts->memtable_prefix_bloom_huge_page_tlb_size = SvIV(*val);
+    if (val = hv_fetchs(options, "bloom_locality", 0))
+        opts->bloom_locality = SvIV(*val);
+    if (val = hv_fetchs(options, "max_successive_merges", 0))
+        opts->max_successive_merges = SvIV(*val);
+    if (val = hv_fetchs(options, "min_partial_merge_operands", 0))
+        opts->min_partial_merge_operands = SvIV(*val);
 }
 
 static void
@@ -903,6 +921,8 @@ apply_read_options(pTHX_ rocksdb::ReadOptions* opts, HV* options) {
         opts->verify_checksums = SvTRUE(*val);
     if (val = hv_fetchs(options, "fill_cache", 0))
         opts->fill_cache = SvTRUE(*val);
+    if (val = hv_fetchs(options, "tailing", 0))
+        opts->tailing = SvTRUE(*val);
     if (val = hv_fetchs(options, "read_tier", 0)) {
         STRLEN len;
         char* str = SvPV(*val, len);
@@ -932,6 +952,8 @@ apply_write_options(pTHX_ rocksdb::WriteOptions* opts, HV* options) {
         opts->sync = SvTRUE(*val);
     if (val = hv_fetchs(options, "disableWAL", 0))
         opts->disableWAL = SvTRUE(*val);
+    if (val = hv_fetchs(options, "timeout_hint_us", 0))
+        opts->timeout_hint_us = SvIV(*val);
 }
 
 static void

@@ -382,6 +382,10 @@ Defaults to 1.
 
 Defaults to 1000.
 
+=item max_total_wal_size :Int
+
+Defaults to 0.
+
 =item block_cache :RocksDB::Cache
 
 Defaults to undef. See L<RocksDB::Cache>, L<RocksDB::LRUCache>.
@@ -503,7 +507,7 @@ Defaults to "".
 
 =item disable_seek_compaction :Bool
 
-Defaults to false.
+Defaults to true.
 
 =item delete_obsolete_files_period_micros :Int
 
@@ -515,7 +519,7 @@ Defaults to 1.
 
 =item max_background_flushes :Int
 
-Defaults to 0.
+Defaults to 1.
 
 =item max_log_file_size :Int
 
@@ -630,6 +634,10 @@ Defaults to false.
 
 Defaults to 0.
 
+=item allow_thread_local :Bool
+
+Defaults to true.
+
 =item compaction_style :Str
 
 Defaults to 'level'. It can be specified using the following arguments.
@@ -637,6 +645,10 @@ Defaults to 'level'. It can be specified using the following arguments.
   level
   universal
   fifo
+
+=item verify_checksums_in_compaction :Bool
+
+Defaults to true.
 
 =item compaction_options_universal :HashRef
 
@@ -661,6 +673,30 @@ Defaults to false.
 =item inplace_update_num_locks :Int
 
 Defaults to 10000, if inplace_update_support = true, else 0.
+
+=item memtable_prefix_bloom_bits :Int
+
+If prefix_extractor is set and bloom_bits is not 0, create prefix bloom for memtable.
+
+=item memtable_prefix_bloom_probes :Int
+
+Number of hash probes per key.
+
+=item memtable_prefix_bloom_huge_page_tlb_size :Int
+
+Page size for huge page TLB for bloom in memtable. If <=0, not allocate from huge page TLB but from malloc.
+
+=item bloom_locality :Int
+
+Defaults to 0.
+
+=item max_successive_merges :Int
+
+Defaults to 0 (disabled).
+
+=item min_partial_merge_operands :Int
+
+Defaults to 2.
 
 =back
 
@@ -713,7 +749,7 @@ Defaults to 1GB.
 
 =item verify_checksums :Bool
 
-Defaults to false.
+Defaults to true.
 
 =item fill_cache :Bool
 
@@ -730,6 +766,10 @@ Defaults to 'read_all'. It can be specified using the following arguments.
   read_all
   block_cache
 
+=item tailing :Bool
+
+Defaults to false.
+
 =back
 
 =head2 Write options
@@ -743,6 +783,10 @@ Defaults to false.
 =item disableWAL :Bool
 
 Defaults to false.
+
+=item timeout_hint_us :Int
+
+Defaults to 0.
 
 =back
 

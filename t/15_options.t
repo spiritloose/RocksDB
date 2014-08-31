@@ -32,6 +32,7 @@ my $db = RocksDB->new($name, {
     max_write_buffer_number                   => 2,
     min_write_buffer_number_to_merge          => 1,
     max_open_files                            => 1000,
+    max_total_wal_size                        => 0,
     block_cache                               => RocksDB::LRUCache->new(1024),
     block_cache_compressed                    => RocksDB::LRUCache->new(1024),
     block_size                                => 4 * 1024,
@@ -91,7 +92,9 @@ my $db = RocksDB->new($name, {
     access_hint_on_compaction_start           => 'normal',
     use_adaptive_mutex                        => 0,
     bytes_per_sync                            => 0,
+    allow_thread_local                        => 1,
     compaction_style                          => 'universal',
+    verify_checksums_in_compaction            => 1,
     compaction_options_universal              => {
         size_ratio                     => 1,
         min_merge_width                => 2,
@@ -104,12 +107,19 @@ my $db = RocksDB->new($name, {
     max_sequential_skip_in_iterations         => 8,
     inplace_update_support                    => 0,
     inplace_update_num_locks                  => 10000,
+    memtable_prefix_bloom_bits                => 0,
+    memtable_prefix_bloom_probes              => 1,
+    memtable_prefix_bloom_huge_page_tlb_size  => 0,
+    bloom_locality                            => 0,
+    max_successive_merges                     => 0,
+    min_partial_merge_operands                => 2,
 });
 isa_ok $db, 'RocksDB';
 
 $db->put('foo', 'bar', {
     sync       => 0,
     disableWAL => 0,
+    tailing    => 0,
 });
 my $snapshot = $db->get_snapshot;
 is $db->get('foo', {
@@ -117,6 +127,7 @@ is $db->get('foo', {
     fill_cache       => 1,
     snapshot         => $snapshot,
     read_tier        => 'read_all',
+    timeout_hint_us  => 0,
 }), 'bar';
 $db->flush({ wait => 1 });
 done_testing;
