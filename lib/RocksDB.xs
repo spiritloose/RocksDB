@@ -600,6 +600,26 @@ sv_to_compression_type(pTHX_ SV* sv, const char* name) {
 static void
 apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
     SV** val;
+    if (val = hv_fetchs(options, "IncreaseParallelism", 0))
+        opts->IncreaseParallelism();
+    if (val = hv_fetchs(options, "PrepareForBulkLoad", 0))
+        opts->PrepareForBulkLoad();
+    if (val = hv_fetchs(options, "OptimizeForPointLookup", 0))
+        opts->OptimizeForPointLookup();
+    if (val = hv_fetchs(options, "OptimizeLevelStyleCompaction", 0)) {
+        if (SvOK(*val)) {
+            opts->OptimizeLevelStyleCompaction(SvIV(*val));
+        } else {
+            opts->OptimizeLevelStyleCompaction();
+        }
+    }
+    if (val = hv_fetchs(options, "OptimizeUniversalStyleCompaction", 0)) {
+        if (SvOK(*val)) {
+            opts->OptimizeUniversalStyleCompaction(SvIV(*val));
+        } else {
+            opts->OptimizeUniversalStyleCompaction();
+        }
+    }
     if (val = hv_fetchs(options, "comparator", 0)) {
         if (RocksDB::Comparator* cmp =
                 (RocksDB::Comparator*) FIND_MAGIC_OBJ(*val, "RocksDB::Comparator",

@@ -338,6 +338,26 @@ For details, see the documentation for RocksDB itself.
 
 =over 4
 
+=item IncreaseParallelism :Undef
+
+Call DBOptions.IncreaseParallelism(). Value will be ignored.
+
+=item PrepareForBulkLoad :Undef
+
+Call Options.PrepareForBulkLoad(). Value will be ignored.
+
+=item OptimizeForPointLookup :Undef
+
+Call ColumnFamilyOptions.OptimizeForPointLookup(). Value will be ignored.
+
+=item OptimizeLevelStyleCompaction :Maybe[Int]
+
+Call ColumnFamilyOptions.OptimizeLevelStyleCompaction() with given value.
+
+=item OptimizeUniversalStyleCompaction :Maybe[Int]
+
+Call ColumnFamilyOptions.OptimizeUniversalStyleCompaction() with given value.
+
 =item read_only :Bool
 
 Defaults to false. If true, call rocksdb::DB::OpenForReadOnly().
