@@ -32,6 +32,12 @@ is $db->get("nu\0ll"), undef;
 ok !$db->exists("nu\0ll");
 is_deeply $db->get_multi('foo', "nu\0ll"), { foo => undef, "nu\0ll" => undef };
 
+$db->put_multi({
+    foo => 'baz',
+    "nu\0ll" => "foo\0bar",
+});
+is_deeply $db->get_multi('foo', "nu\0ll"), { foo => 'baz', "nu\0ll" => "foo\0bar" };
+
 $db->flush;
 undef $db;
 RocksDB->destroy_db($name);

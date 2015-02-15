@@ -34,6 +34,7 @@ extern "C" {
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/statistics.h>
 #include <rocksdb/ldb_tool.h>
+#include <rocksdb/table.h>
 #pragma pop_macro("NORMAL")
 
 #define DESTROY_ROCKSDB_OBJ(self) STMT_START { \
@@ -119,6 +120,13 @@ struct Cache {
         this->ptr = ptr;
     }
     std::shared_ptr<rocksdb::Cache> ptr;
+};
+
+struct FilterPolicy {
+    FilterPolicy(const rocksdb::FilterPolicy* policy) {
+        this->ptr = std::shared_ptr<const rocksdb::FilterPolicy>(policy);
+    }
+    std::shared_ptr<const rocksdb::FilterPolicy> ptr;
 };
 
 struct Statistics {
@@ -571,6 +579,29 @@ struct SliceTransform {
     std::shared_ptr<const rocksdb::SliceTransform> ptr;
 };
 
+class SVLogger : public rocksdb::Logger {
+public:
+    SVLogger() {
+        dTHX;
+        sv = newSV(0);
+    }
+    ~SVLogger() {
+        dTHX;
+        SvREFCNT_dec(sv);
+    }
+    virtual void Logv(const char* format, va_list ap) override {
+        dTHX;
+        va_list ap2;
+        va_copy(ap2, ap);
+        sv_vcatpvf(sv, format, &ap2);
+    }
+    SV* GetSV() {
+        return sv;
+    }
+private:
+    SV* sv;
+};
+
 }
 
 static rocksdb::CompressionType
@@ -598,6 +629,124 @@ sv_to_compression_type(pTHX_ SV* sv, const char* name) {
 }
 
 static void
+apply_block_based_table_options(pTHX_ rocksdb::BlockBasedTableOptions* opts, HV* options, AV* fields) {
+    SV** val;
+    if (val = hv_fetchs(options, "cache_index_and_filter_blocks", 0))
+        opts->cache_index_and_filter_blocks = SvTRUE(*val);
+    if (val = hv_fetchs(options, "index_type", 0)) {
+        STRLEN len;
+        char* str = SvPV(*val, len);
+        if (strnEQ(str, "binary_search", len)) {
+            opts->index_type = rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch;
+        } else if (strnEQ(str, "hash_search", len)) {
+            opts->index_type = rocksdb::BlockBasedTableOptions::IndexType::kHashSearch;
+        } else {
+            croak("invalid value '%s' for index_type", str);
+        }
+    }
+    if (val = hv_fetchs(options, "hash_index_allow_collision", 0))
+        opts->hash_index_allow_collision = SvTRUE(*val);
+    if (val = hv_fetchs(options, "checksum", 0)) {
+        STRLEN len;
+        char* str = SvPV(*val, len);
+        if (strnEQ(str, "no_checksum", len)) {
+            opts->checksum = rocksdb::ChecksumType::kNoChecksum;
+        } else if (strnEQ(str, "crc32c", len)) {
+            opts->checksum = rocksdb::ChecksumType::kCRC32c;
+        } else if (strnEQ(str, "xxhash", len)) {
+            opts->checksum = rocksdb::ChecksumType::kxxHash;
+        } else {
+            croak("invalid value '%s' for checksum", str);
+        }
+    }
+    if (val = hv_fetchs(options, "block_cache", 0)) {
+        if (RocksDB::Cache *cache =
+                (RocksDB::Cache*) FIND_MAGIC_OBJ(*val, "RocksDB::Cache",
+                        TYPE_ROCKSDB_CACHE)) {
+            av_push(fields, SvREFCNT_inc_simple_NN(*val));
+            opts->block_cache = cache->ptr;
+        } else {
+            croak("block_cache is not of type RocksDB::Cache");
+        }
+    }
+    if (val = hv_fetchs(options, "block_cache_compressed", 0)) {
+        if (RocksDB::Cache *cache =
+                (RocksDB::Cache*) FIND_MAGIC_OBJ(*val, "RocksDB::Cache",
+                        TYPE_ROCKSDB_CACHE)) {
+            av_push(fields, SvREFCNT_inc_simple_NN(*val));
+            opts->block_cache_compressed = cache->ptr;
+        } else {
+            croak("block_cache is not of type RocksDB::Cache");
+        }
+    }
+    if (val = hv_fetchs(options, "block_size", 0))
+        opts->block_size = SvIV(*val);
+    if (val = hv_fetchs(options, "block_restart_interval", 0))
+        opts->block_restart_interval = SvIV(*val);
+    if (val = hv_fetchs(options, "filter_policy", 0)) {
+        if (RocksDB::FilterPolicy* policy =
+                (RocksDB::FilterPolicy*) FIND_MAGIC_OBJ(*val, "RocksDB::FilterPolicy",
+                        TYPE_ROCKSDB_FILTERPOLICY)) {
+            av_push(fields, SvREFCNT_inc_simple_NN(*val));
+            opts->filter_policy = policy->ptr;
+        } else {
+            croak("filter_policy is not of type RocksDB::FilterPolicy");
+        }
+    }
+    if (val = hv_fetchs(options, "whole_key_filtering", 0))
+        opts->whole_key_filtering = SvTRUE(*val);
+    if (val = hv_fetchs(options, "no_block_cache", 0))
+        opts->no_block_cache = SvTRUE(*val);
+    if (val = hv_fetchs(options, "block_size_deviation", 0))
+        opts->block_size_deviation = SvIV(*val);
+}
+
+static void
+apply_plain_table_options(pTHX_ rocksdb::PlainTableOptions * opts, HV* options, AV* fields) {
+    SV** val;
+    if (val = hv_fetchs(options, "user_key_len", 0))
+        opts->user_key_len = SvIV(*val);
+    if (val = hv_fetchs(options, "bloom_bits_per_key", 0))
+        opts->bloom_bits_per_key = SvIV(*val);
+    if (val = hv_fetchs(options, "hash_table_ratio", 0))
+        opts->hash_table_ratio = SvNV(*val);
+    if (val = hv_fetchs(options, "index_sparseness", 0))
+        opts->index_sparseness = SvIV(*val);
+    if (val = hv_fetchs(options, "huge_page_tlb_size", 0))
+        opts->huge_page_tlb_size = SvIV(*val);
+    if (val = hv_fetchs(options, "encoding_type", 0)) {
+        STRLEN len;
+        char* str = SvPV(*val, len);
+        if (strnEQ(str, "plain", len)) {
+            opts->encoding_type = rocksdb::EncodingType::kPlain;
+        } else if (strnEQ(str, "prefix", len)) {
+            opts->encoding_type = rocksdb::EncodingType::kPrefix;
+        } else {
+            croak("invalid value '%s' for encoding_type", str);
+        }
+    }
+    if (val = hv_fetchs(options, "full_scan_mode", 0))
+        opts->full_scan_mode = SvTRUE(*val);
+    if (val = hv_fetchs(options, "store_index_in_file", 0))
+        opts->store_index_in_file = SvTRUE(*val);
+}
+
+static void
+apply_cuckoo_table_options(pTHX_ rocksdb::CuckooTableOptions * opts, HV* options, AV* fields) {
+    SV** val;
+    if (val = hv_fetchs(options, "hash_table_ratio", 0))
+        opts->hash_table_ratio = SvNV(*val);
+    if (val = hv_fetchs(options, "max_search_depth", 0))
+        opts->max_search_depth = SvIV(*val);
+    if (val = hv_fetchs(options, "cuckoo_block_size", 0))
+        opts->cuckoo_block_size = SvIV(*val);
+    if (val = hv_fetchs(options, "identity_as_first_hash", 0))
+        opts->identity_as_first_hash = SvTRUE(*val);
+    if (val = hv_fetchs(options, "use_module_hash", 0))
+        opts->use_module_hash = SvTRUE(*val);
+}
+
+static void
 apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
     SV** val;
     if (val = hv_fetchs(options, "IncreaseParallelism", 0))
@@ -605,7 +754,7 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
     if (val = hv_fetchs(options, "PrepareForBulkLoad", 0))
         opts->PrepareForBulkLoad();
     if (val = hv_fetchs(options, "OptimizeForPointLookup", 0))
-        opts->OptimizeForPointLookup();
+        opts->OptimizeForPointLookup(SvIV(*val));
     if (val = hv_fetchs(options, "OptimizeLevelStyleCompaction", 0)) {
         if (SvOK(*val)) {
             opts->OptimizeLevelStyleCompaction(SvIV(*val));
@@ -666,30 +815,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->max_open_files = SvIV(*val);
     if (val = hv_fetchs(options, "max_total_wal_size", 0))
         opts->max_total_wal_size = SvIV(*val);
-    if (val = hv_fetchs(options, "block_cache", 0)) {
-        if (RocksDB::Cache *cache =
-                (RocksDB::Cache*) FIND_MAGIC_OBJ(*val, "RocksDB::Cache",
-                        TYPE_ROCKSDB_CACHE)) {
-            av_push(fields, SvREFCNT_inc_simple_NN(*val));
-            opts->block_cache = cache->ptr;
-        } else {
-            croak("block_cache is not of type RocksDB::Cache");
-        }
-    }
-    if (val = hv_fetchs(options, "block_cache_compressed", 0)) {
-        if (RocksDB::Cache *cache =
-                (RocksDB::Cache*) FIND_MAGIC_OBJ(*val, "RocksDB::Cache",
-                        TYPE_ROCKSDB_CACHE)) {
-            av_push(fields, SvREFCNT_inc_simple_NN(*val));
-            opts->block_cache_compressed = cache->ptr;
-        } else {
-            croak("block_cache is not of type RocksDB::Cache");
-        }
-    }
-    if (val = hv_fetchs(options, "block_size", 0))
-        opts->block_size = SvIV(*val);
-    if (val = hv_fetchs(options, "block_restart_interval", 0))
-        opts->block_restart_interval = SvIV(*val);
     if (val = hv_fetchs(options, "compression", 0))
         opts->compression = sv_to_compression_type(aTHX_ *val, "compression");
     if (val = hv_fetchs(options, "compression_per_level", 0)) {
@@ -705,16 +830,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
             croak("invalid value for compression_per_level");
         }
     }
-    if (val = hv_fetchs(options, "filter_policy", 0)) {
-        if (rocksdb::FilterPolicy* policy =
-                (rocksdb::FilterPolicy*) FIND_MAGIC_OBJ(*val, "RocksDB::FilterPolicy",
-                        TYPE_ROCKSDB_FILTERPOLICY)) {
-            av_push(fields, SvREFCNT_inc_simple_NN(*val));
-            opts->filter_policy = policy;
-        } else {
-            croak("filter_policy is not of type RocksDB::FilterPolicy");
-        }
-    }
     if (val = hv_fetchs(options, "prefix_extractor", 0)) {
         if (RocksDB::SliceTransform* transform =
                 (RocksDB::SliceTransform*) FIND_MAGIC_OBJ(*val, "RocksDB::SliceTransform",
@@ -725,8 +840,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
             croak("prefix_extractor is not of type RocksDB::SliceTransform");
         }
     }
-    if (val = hv_fetchs(options, "whole_key_filtering", 0))
-        opts->whole_key_filtering = SvTRUE(*val);
     if (val = hv_fetchs(options, "num_levels", 0))
         opts->num_levels = SvIV(*val);
     if (val = hv_fetchs(options, "level0_file_num_compaction_trigger", 0))
@@ -769,8 +882,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->disableDataSync = SvTRUE(*val);
     if (val = hv_fetchs(options, "use_fsync", 0))
         opts->use_fsync = SvTRUE(*val);
-    if (val = hv_fetchs(options, "db_stats_log_interval", 0))
-        opts->db_stats_log_interval = SvTRUE(*val);
     if (val = hv_fetchs(options, "db_log_dir", 0)) {
         STRLEN len;
         const char *str = SvPV(*val, len);
@@ -781,8 +892,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         const char *str = SvPV(*val, len);
         opts->wal_dir = std::string(str, len);
     }
-    if (val = hv_fetchs(options, "disable_seek_compaction", 0))
-        opts->disable_seek_compaction = SvTRUE(*val);
     if (val = hv_fetchs(options, "delete_obsolete_files_period_micros", 0))
         opts->delete_obsolete_files_period_micros = SvIV(*val);
     if (val = hv_fetchs(options, "max_background_compactions", 0))
@@ -803,8 +912,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->rate_limit_delay_max_milliseconds = SvIV(*val);
     if (val = hv_fetchs(options, "max_manifest_file_size", 0))
         opts->max_manifest_file_size = SvIV(*val);
-    if (val = hv_fetchs(options, "no_block_cache", 0))
-        opts->no_block_cache = SvTRUE(*val);
     if (val = hv_fetchs(options, "table_cache_numshardbits", 0))
         opts->table_cache_numshardbits = SvIV(*val);
     if (val = hv_fetchs(options, "table_cache_remove_scan_count_limit", 0))
@@ -833,8 +940,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->skip_log_error_on_recovery = SvTRUE(*val);
     if (val = hv_fetchs(options, "stats_dump_period_sec", 0))
         opts->stats_dump_period_sec = SvIV(*val);
-    if (val = hv_fetchs(options, "block_size_deviation", 0))
-        opts->block_size_deviation = SvIV(*val);
     if (val = hv_fetchs(options, "advise_random_on_open", 0))
         opts->advise_random_on_open = SvTRUE(*val);
     if (val = hv_fetchs(options, "access_hint_on_compaction_start", 0)) {
@@ -856,8 +961,6 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->use_adaptive_mutex = SvTRUE(*val);
     if (val = hv_fetchs(options, "bytes_per_sync", 0))
         opts->bytes_per_sync = SvIV(*val);
-    if (val = hv_fetchs(options, "allow_thread_local", 0))
-        opts->allow_thread_local = SvTRUE(*val);
     if (val = hv_fetchs(options, "compaction_style", 0)) {
         STRLEN len;
         char* str = SvPV(*val, len);
@@ -932,6 +1035,35 @@ apply_options(pTHX_ rocksdb::Options* opts, HV* options, AV* fields) {
         opts->max_successive_merges = SvIV(*val);
     if (val = hv_fetchs(options, "min_partial_merge_operands", 0))
         opts->min_partial_merge_operands = SvIV(*val);
+
+    if (val = hv_fetchs(options, "block_based_table_options", 0)) {
+        if (!SvHashRefOK(*val)) {
+            croak("invalid value for block_based_table_options");
+        }
+        HV* hv = (HV*) SvRV(*val);
+        rocksdb::BlockBasedTableOptions table_options;
+        apply_block_based_table_options(aTHX_ &table_options, hv, fields);
+        opts->table_factory = std::shared_ptr<rocksdb::TableFactory>(
+                rocksdb::NewBlockBasedTableFactory(table_options));
+    } else if (val = hv_fetchs(options, "plain_table_options", 0)) {
+        if (!SvHashRefOK(*val)) {
+            croak("invalid value for plain_table_options");
+        }
+        HV* hv = (HV*) SvRV(*val);
+        rocksdb::PlainTableOptions table_options;
+        apply_plain_table_options(aTHX_ &table_options, hv, fields);
+        opts->table_factory = std::shared_ptr<rocksdb::TableFactory>(
+                rocksdb::NewPlainTableFactory(table_options));
+    } else if (val = hv_fetchs(options, "cuckoo_table_options", 0)) {
+        if (!SvHashRefOK(*val)) {
+            croak("invalid value for cuckoo_table_options");
+        }
+        HV* hv = (HV*) SvRV(*val);
+        rocksdb::CuckooTableOptions table_options;
+        apply_cuckoo_table_options(aTHX_ &table_options, hv, fields);
+        opts->table_factory = std::shared_ptr<rocksdb::TableFactory>(
+                rocksdb::NewCuckooTableFactory(table_options));
+    }
 }
 
 static void
@@ -963,6 +1095,8 @@ apply_read_options(pTHX_ rocksdb::ReadOptions* opts, HV* options) {
             croak("snapshot is not of type RocksDB::Snapshot");
         }
     }
+    if (val = hv_fetchs(options, "total_order_seek", 0))
+        opts->total_order_seek = SvTRUE(*val);
 }
 
 static void
@@ -1108,6 +1242,24 @@ CODE:
     if (options)
         apply_write_options(aTHX_ &opts, options);
     CROAK_ON_ERROR(THIS->db->Put(opts, key, value));
+
+void
+RocksDB::DB::put_multi(HV* hash, HV* options = NULL)
+CODE:
+    rocksdb::WriteOptions opts = rocksdb::WriteOptions();
+    if (options)
+        apply_write_options(aTHX_ &opts, options);
+    rocksdb::WriteBatch batch;
+    hv_iterinit(hash);
+    SV* value;
+    char *key;
+    I32 klen;
+    STRLEN vlen;
+    while ((value = hv_iternextsv(hash, &key, &klen)) != NULL) {
+        const char* val = SvPV(value, vlen);
+        batch.Put(rocksdb::Slice(key, klen), rocksdb::Slice(val, vlen));
+    }
+    CROAK_ON_ERROR(THIS->db->Write(opts, &batch));
 
 void
 RocksDB::DB::merge(rocksdb::Slice key, rocksdb::Slice value, HV* options = NULL)
@@ -1643,7 +1795,7 @@ OUTPUT:
 MODULE = RocksDB        PACKAGE = RocksDB::FilterPolicy
 
 void
-rocksdb::FilterPolicy::DESTROY()
+RocksDB::FilterPolicy::DESTROY()
 CLEANUP:
     DESTROY_ROCKSDB_OBJ(SELF);
 
@@ -1652,10 +1804,10 @@ MODULE = RocksDB        PACKAGE = RocksDB::BloomFilterPolicy
 BOOT:
     av_push(get_av("RocksDB::BloomFilterPolicy::ISA", TRUE), newSVpvs("RocksDB::FilterPolicy"));
 
-const rocksdb::FilterPolicy *
+RocksDB::FilterPolicy *
 RocksDB::BloomFilterPolicy::new(int bits_per_key)
 CODE:
-    RETVAL = rocksdb::NewBloomFilterPolicy(bits_per_key);
+    RETVAL = new RocksDB::FilterPolicy(rocksdb::NewBloomFilterPolicy(bits_per_key));
 OUTPUT:
     RETVAL
 

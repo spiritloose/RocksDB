@@ -97,6 +97,10 @@ Returns reference to hash, where $href->{$key} holds corresponding value.
 
 Set the database entry for $key to $value.
 
+=head2 C<< $db->put_multi($key_values :HashRef [, $write_options :HashRef]) :Undef >>
+
+Set the database entry for $key_values.
+
 =head2 C<< $db->delete($key :Str[, $write_options :HashRef]) :Undef >>
 
 Remove the database entry (if any) for $key.
@@ -346,9 +350,9 @@ Call DBOptions.IncreaseParallelism(). Value will be ignored.
 
 Call Options.PrepareForBulkLoad(). Value will be ignored.
 
-=item OptimizeForPointLookup :Undef
+=item OptimizeForPointLookup :Int
 
-Call ColumnFamilyOptions.OptimizeForPointLookup(). Value will be ignored.
+Call ColumnFamilyOptions.OptimizeForPointLookup() with given value.
 
 =item OptimizeLevelStyleCompaction :Maybe[Int]
 
@@ -406,22 +410,6 @@ Defaults to 1000.
 
 Defaults to 0.
 
-=item block_cache :RocksDB::Cache
-
-Defaults to undef. See L<RocksDB::Cache>, L<RocksDB::LRUCache>.
-
-=item block_cache_compressed :RocksDB::Cache
-
-Defaults to undef. See L<RocksDB::Cache>, L<RocksDB::LRUCache>.
-
-=item block_size :Int
-
-Defaults to 4K.
-
-=item block_restart_interval :Int
-
-Defaults to 16.
-
 =item compression :Str
 
 Defaults to 'snappy'. It can be specified using the following arguments.
@@ -437,17 +425,9 @@ Defaults to 'snappy'. It can be specified using the following arguments.
 
   ['snappy', 'zlib', 'zlib', 'bzip2', 'lz4', 'lz4hc' ...]
 
-=item filter_policy :RocksDB::FilterPolicy
-
-Defaults to undef. See L<RocksDB::FilterPolicy>, L<RocksDB::BloomFilterPolicy>.
-
 =item prefix_extractor :RocksDB::SliceTransform
 
 Defaults to undef. See L<RocksDB::SliceTransform>, L<RocksDB::FixedPrefixTransform>.
-
-=item whole_key_filtering :Bool
-
-Defaults to true.
 
 =item num_levels :Int
 
@@ -513,10 +493,6 @@ Defaults to false.
 
 Defaults to false.
 
-=item db_stats_log_interval :Int
-
-Defaults to 1800 (half an hour).
-
 =item db_log_dir :Str
 
 Defaults to "".
@@ -524,10 +500,6 @@ Defaults to "".
 =item wal_dir :Str
 
 Defaults to "".
-
-=item disable_seek_compaction :Bool
-
-Defaults to true.
 
 =item delete_obsolete_files_period_micros :Int
 
@@ -568,10 +540,6 @@ Defaults to 1000.
 =item max_manifest_file_size :Int
 
 Defaults to MAX_INT.
-
-=item no_block_cache :Bool
-
-Defaults to false.
 
 =item table_cache_numshardbits :Int
 
@@ -629,10 +597,6 @@ Defaults to false.
 
 Defaults to 3600 (1 hour).
 
-=item block_size_deviation :Int
-
-Defaults to 10.
-
 =item advise_random_on_open :Bool
 
 Defaults to true.
@@ -653,10 +617,6 @@ Defaults to false.
 =item bytes_per_sync :Int
 
 Defaults to 0.
-
-=item allow_thread_local :Bool
-
-Defaults to true.
 
 =item compaction_style :Str
 
@@ -717,6 +677,146 @@ Defaults to 0 (disabled).
 =item min_partial_merge_operands :Int
 
 Defaults to 2.
+
+=item block_based_table_options :HashRef
+
+See 'Block-based table options' section below.
+
+=item plain_table_options :HashRef
+
+See 'Plain table options' section below.
+
+=item cuckoo_table_options :HashRef
+
+See 'Cuckoo table options' section below.
+
+=back
+
+=head2 Block-based table options
+
+=over 4
+
+=item cache_index_and_filter_blocks :Bool
+
+Defaults to false.
+
+=item index_type :Str
+
+Defaults to 'binary_search'. It can be specified using the following arguments.
+
+  binary_search
+  hash_search
+
+=item hash_index_allow_collision :Bool
+
+Defaults to true.
+
+=item checksum :Str
+
+Defaults to 'crc32c'. It can be specified using the following arguments.
+
+  no_checksum
+  crc32c
+  xxhash
+
+=item block_cache :RocksDB::Cache
+
+Defaults to undef. See L<RocksDB::Cache>, L<RocksDB::LRUCache>.
+
+=item block_cache_compressed :RocksDB::Cache
+
+Defaults to undef. See L<RocksDB::Cache>, L<RocksDB::LRUCache>.
+
+=item block_size :Int
+
+Defaults to 4K.
+
+=item block_restart_interval :Int
+
+Defaults to 16.
+
+=item filter_policy :RocksDB::FilterPolicy
+
+Defaults to undef. See L<RocksDB::FilterPolicy>, L<RocksDB::BloomFilterPolicy>.
+
+=item whole_key_filtering :Bool
+
+Defaults to true.
+
+=item no_block_cache :Bool
+
+Defaults to false.
+
+=item block_size_deviation :Int
+
+Defaults to 10.
+
+=back
+
+=head2 Plain table options
+
+=over 4
+
+=item user_key_len :Int
+
+Defaults to 0 (variable length).
+
+=item bloom_bits_per_key :Int
+
+Defaults to 10.
+
+=item hash_table_ratio :Num
+
+Defaults to 0.75.
+
+=item index_sparseness :Int
+
+Defaults to 16.
+
+=item huge_page_tlb_size :Int
+
+Defaults to 0.
+
+=item encoding_type :Str
+
+Defaults to 'plain'. It can be specified using the following arguments.
+
+  plain
+  prefix
+
+=item full_scan_mode :Bool
+
+Defaults to false.
+
+=item store_index_in_file :Bool
+
+Defaults to false.
+
+=back
+
+=head2 Cuckoo table options
+
+=over 4
+
+=item hash_table_ratio :Num
+
+Defaults to 0.9.
+
+=item max_search_depth :Int
+
+Defaults to 100.
+
+=item cuckoo_block_size :Int
+
+Defaults to 5.
+
+=item identity_as_first_hash :Bool
+
+Defaults to false.
+
+=item use_module_hash :Bool
+
+Defaults to true.
 
 =back
 
@@ -787,6 +887,10 @@ Defaults to 'read_all'. It can be specified using the following arguments.
   block_cache
 
 =item tailing :Bool
+
+Defaults to false.
+
+=item total_order_seek :Bool
 
 Defaults to false.
 
