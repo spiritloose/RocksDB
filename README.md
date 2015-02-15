@@ -84,6 +84,10 @@ Returns reference to hash, where $href->{$key} holds corresponding value.
 
 Set the database entry for $key to $value.
 
+## `$db->put_multi($key_values :HashRef [, $write_options :HashRef]) :Undef`
+
+Set the database entry for $key\_values.
+
 ## `$db->delete($key :Str[, $write_options :HashRef]) :Undef`
 
 Remove the database entry (if any) for $key.
@@ -327,9 +331,9 @@ For details, see the documentation for RocksDB itself.
 
     Call Options.PrepareForBulkLoad(). Value will be ignored.
 
-- OptimizeForPointLookup :Undef
+- OptimizeForPointLookup :Int
 
-    Call ColumnFamilyOptions.OptimizeForPointLookup(). Value will be ignored.
+    Call ColumnFamilyOptions.OptimizeForPointLookup() with given value.
 
 - OptimizeLevelStyleCompaction :Maybe\[Int\]
 
@@ -387,22 +391,6 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to 0.
 
-- block\_cache :RocksDB::Cache
-
-    Defaults to undef. See [RocksDB::Cache](https://metacpan.org/pod/RocksDB::Cache), [RocksDB::LRUCache](https://metacpan.org/pod/RocksDB::LRUCache).
-
-- block\_cache\_compressed :RocksDB::Cache
-
-    Defaults to undef. See [RocksDB::Cache](https://metacpan.org/pod/RocksDB::Cache), [RocksDB::LRUCache](https://metacpan.org/pod/RocksDB::LRUCache).
-
-- block\_size :Int
-
-    Defaults to 4K.
-
-- block\_restart\_interval :Int
-
-    Defaults to 16.
-
 - compression :Str
 
     Defaults to 'snappy'. It can be specified using the following arguments.
@@ -417,17 +405,9 @@ For details, see the documentation for RocksDB itself.
 - compression\_per\_level :ArrayRef\[Str\]
 
         ['snappy', 'zlib', 'zlib', 'bzip2', 'lz4', 'lz4hc' ...]
-- filter\_policy :RocksDB::FilterPolicy
-
-    Defaults to undef. See [RocksDB::FilterPolicy](https://metacpan.org/pod/RocksDB::FilterPolicy), [RocksDB::BloomFilterPolicy](https://metacpan.org/pod/RocksDB::BloomFilterPolicy).
-
 - prefix\_extractor :RocksDB::SliceTransform
 
     Defaults to undef. See [RocksDB::SliceTransform](https://metacpan.org/pod/RocksDB::SliceTransform), [RocksDB::FixedPrefixTransform](https://metacpan.org/pod/RocksDB::FixedPrefixTransform).
-
-- whole\_key\_filtering :Bool
-
-    Defaults to true.
 
 - num\_levels :Int
 
@@ -493,10 +473,6 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to false.
 
-- db\_stats\_log\_interval :Int
-
-    Defaults to 1800 (half an hour).
-
 - db\_log\_dir :Str
 
     Defaults to "".
@@ -504,10 +480,6 @@ For details, see the documentation for RocksDB itself.
 - wal\_dir :Str
 
     Defaults to "".
-
-- disable\_seek\_compaction :Bool
-
-    Defaults to true.
 
 - delete\_obsolete\_files\_period\_micros :Int
 
@@ -548,10 +520,6 @@ For details, see the documentation for RocksDB itself.
 - max\_manifest\_file\_size :Int
 
     Defaults to MAX\_INT.
-
-- no\_block\_cache :Bool
-
-    Defaults to false.
 
 - table\_cache\_numshardbits :Int
 
@@ -609,10 +577,6 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to 3600 (1 hour).
 
-- block\_size\_deviation :Int
-
-    Defaults to 10.
-
 - advise\_random\_on\_open :Bool
 
     Defaults to true.
@@ -633,10 +597,6 @@ For details, see the documentation for RocksDB itself.
 - bytes\_per\_sync :Int
 
     Defaults to 0.
-
-- allow\_thread\_local :Bool
-
-    Defaults to true.
 
 - compaction\_style :Str
 
@@ -698,6 +658,134 @@ For details, see the documentation for RocksDB itself.
 
     Defaults to 2.
 
+- block\_based\_table\_options :HashRef
+
+    See 'Block-based table options' section below.
+
+- plain\_table\_options :HashRef
+
+    See 'Plain table options' section below.
+
+- cuckoo\_table\_options :HashRef
+
+    See 'Cuckoo table options' section below.
+
+## Block-based table options
+
+- cache\_index\_and\_filter\_blocks :Bool
+
+    Defaults to false.
+
+- index\_type :Str
+
+    Defaults to 'binary\_search'. It can be specified using the following arguments.
+
+        binary_search
+        hash_search
+
+- hash\_index\_allow\_collision :Bool
+
+    Defaults to true.
+
+- checksum :Str
+
+    Defaults to 'crc32c'. It can be specified using the following arguments.
+
+        no_checksum
+        crc32c
+        xxhash
+
+- block\_cache :RocksDB::Cache
+
+    Defaults to undef. See [RocksDB::Cache](https://metacpan.org/pod/RocksDB::Cache), [RocksDB::LRUCache](https://metacpan.org/pod/RocksDB::LRUCache).
+
+- block\_cache\_compressed :RocksDB::Cache
+
+    Defaults to undef. See [RocksDB::Cache](https://metacpan.org/pod/RocksDB::Cache), [RocksDB::LRUCache](https://metacpan.org/pod/RocksDB::LRUCache).
+
+- block\_size :Int
+
+    Defaults to 4K.
+
+- block\_restart\_interval :Int
+
+    Defaults to 16.
+
+- filter\_policy :RocksDB::FilterPolicy
+
+    Defaults to undef. See [RocksDB::FilterPolicy](https://metacpan.org/pod/RocksDB::FilterPolicy), [RocksDB::BloomFilterPolicy](https://metacpan.org/pod/RocksDB::BloomFilterPolicy).
+
+- whole\_key\_filtering :Bool
+
+    Defaults to true.
+
+- no\_block\_cache :Bool
+
+    Defaults to false.
+
+- block\_size\_deviation :Int
+
+    Defaults to 10.
+
+## Plain table options
+
+- user\_key\_len :Int
+
+    Defaults to 0 (variable length).
+
+- bloom\_bits\_per\_key :Int
+
+    Defaults to 10.
+
+- hash\_table\_ratio :Num
+
+    Defaults to 0.75.
+
+- index\_sparseness :Int
+
+    Defaults to 16.
+
+- huge\_page\_tlb\_size :Int
+
+    Defaults to 0.
+
+- encoding\_type :Str
+
+    Defaults to 'plain'. It can be specified using the following arguments.
+
+        plain
+        prefix
+
+- full\_scan\_mode :Bool
+
+    Defaults to false.
+
+- store\_index\_in\_file :Bool
+
+    Defaults to false.
+
+## Cuckoo table options
+
+- hash\_table\_ratio :Num
+
+    Defaults to 0.9.
+
+- max\_search\_depth :Int
+
+    Defaults to 100.
+
+- cuckoo\_block\_size :Int
+
+    Defaults to 5.
+
+- identity\_as\_first\_hash :Bool
+
+    Defaults to false.
+
+- use\_module\_hash :Bool
+
+    Defaults to true.
+
 ## Universal compaction options
 
 - size\_ratio :Int
@@ -755,6 +843,10 @@ For details, see the documentation for RocksDB itself.
         block_cache
 
 - tailing :Bool
+
+    Defaults to false.
+
+- total\_order\_seek :Bool
 
     Defaults to false.
 

@@ -2,6 +2,11 @@ Revision history for Perl extension RocksDB
 
 {{$NEXT}}
 
+0.04 2015-02-15T15:54:16Z
+    - Update rocksdb (3.9.1)
+    - Support options for Block-based, plain and Cuckoo table
+    - New API: RocksDB#put_multi($hashref) proposed by Niels Larsen
+
 0.03 2014-08-31T13:15:06Z
     - Update rocksdb (3.4)
     - Add new options

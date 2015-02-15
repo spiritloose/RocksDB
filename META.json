@@ -4,7 +4,7 @@
       "Jiro Nishiguchi <jiro@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v2.1.1, CPAN::Meta::Converter version 2.133380",
+   "generated_by" : "Minilla/v2.3.0, CPAN::Meta::Converter version 2.133380",
    "license" : [
       "bsd"
    ],
@@ -73,5 +73,5 @@
          "web" : "https://github.com/spiritloose/RocksDB"
       }
    },
-   "version" : "0.03"
+   "version" : "0.04"
 }
